@@ -148,7 +148,7 @@ func main(){
 
 	for digest := range removeDigestsMap{
 		fmt.Printf("os.Remove %v %v \n", dir, digest)
-		//os.RemoveAll(dir+digest)
+		os.RemoveAll(dir+digest)
 	}
 }
 

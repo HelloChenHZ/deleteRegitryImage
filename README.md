@@ -5,7 +5,7 @@ golang delete old image layers in registry v2
 
 # Usage
 ```
-Usage of ./deleteRegistryImage:
+./deleteRegistryImage:
   -keepNumber int
     	the digest numbers keep in each tag (default 10)
   -projectName string
