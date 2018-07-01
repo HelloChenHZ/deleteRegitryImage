@@ -130,10 +130,10 @@ func main(){
 				}
 
 				//fmt.Println("File "+digestPath+" exists")
-				bCount++
 				digestCount++
 				if digestCount <= *keepNumber{
 					blobsFiles[bCount] = digestPath
+					bCount++
 				}else{
 					os.RemoveAll( *registryDir+"repositories/"+*projectName+"_manifests/tags/"+tag.Name()+"/index/sha256/"+tagDigest)
 				}
