@@ -35,6 +35,29 @@ var digestsMap, removeDigestsMap map[string]bool
 var blobsFiles [10000] string
 var bCount,pCount int
 
+func pathExist(path string) bool {
+	if _, err := os.Stat(path); os.IsNotExist(err) {
+		fmt.Println("Dir "+path+" does not exist")
+		return false
+	}
+	return true
+}
+
+func judgeArgs() bool {
+	if !pathExist(*registryDir) {
+		return false
+	}
+
+	if !pathExist(*registryDir+"repositories/"+*projectName) {
+		return false
+	}
+
+	if *keepNumber > 50 || *keepNumber < 1 {
+		fmt.Println("Invalid keepNumber value. The value must be 1-50")
+	}
+	return true
+}
+
 func findDigest(dirName string) bool{
 	_, ok := digestsMap[dirName]
 	return ok
@@ -46,12 +69,11 @@ func getLayerDigests(blobFile string) {
 		fmt.Println(err)
 	}
 
-	fmt.Println("Successfully open blobsfile")
+	//fmt.Println("Successfully open blobsfile")
 	defer jsonFile.Close()
 
-	byteValue, _ := ioutil.ReadAll(jsonFile)
-
 	var blob Blob
+	byteValue, _ := ioutil.ReadAll(jsonFile)
 	json.Unmarshal(byteValue, &blob)
 
 	_, ok := digestsMap[blob.Config.Digest[7:]]
@@ -75,38 +97,45 @@ func getLayerDigests(blobFile string) {
 
 func main(){
 	flag.Parse()
+	if !judgeArgs() {
+		return
+	}
+
 	pCount=1
 	for i:=0;i<pCount;i++{
 		digestsMap = map[string]bool{}
 		removeDigestsMap = map[string]bool{}
-		files, err :=ioutil.ReadDir(*registryDir+"repositories/"+*projectName+"_manifests/tags/")
+		tags, err :=ioutil.ReadDir(*registryDir+"repositories/"+*projectName+"_manifests/tags/")
 		if err!=nil {
+			fmt.Println("Get tags from "+*registryDir+"repositories/"+*projectName+"_manifests/tags/ failed!")
 			continue
 		}
 
-		for _, f:=range files{
-			cmd := exec.Command("ls", "-th", *registryDir+"repositories/"+*projectName+"_manifests/tags/"+f.Name()+"/index/sha256/")
+		for _, tag:=range tags{
+			cmd := exec.Command("ls", "-th", *registryDir+"repositories/"+*projectName+"_manifests/tags/"+tag.Name()+"/index/sha256/")
 			out, err := cmd.CombinedOutput()
 			if err!= nil{
+				fmt.Println("Get digest form "+*registryDir+"repositories/"+*projectName+"_manifests/tags/"+tag.Name()+"/index/sha256/ failed!")
 				continue
 			}
 			tagDigests := strings.Fields(string(out))
 
-			fmt.Printf("current tag is %v and tagDigests is %v\n", f.Name(), string(out))
-			var tempCount = 0
+			//fmt.Printf("current tag is %v and tagDigests is %v\n", tag.Name(), string(out))
+			var digestCount = 0
 			for _, tagDigest := range tagDigests{
 				digestPath := *registryDir+"blobs/sha256/" + tagDigest[:2]+"/"+tagDigest+"/data"
-				if _, err := os.Stat(digestPath); os.IsNotExist(err) {
-					fmt.Println("File "+digestPath+" does not exist")
+				if !pathExist(digestPath){
+					os.RemoveAll( *registryDir+"repositories/"+*projectName+"_manifests/tags/"+tag.Name()+"/index/sha256/"+tagDigest)
 					continue
 				}
 
-				fmt.Println("File "+digestPath+" exists")
-				blobsFiles[bCount] = digestPath
+				//fmt.Println("File "+digestPath+" exists")
 				bCount++
-				tempCount++
-				if tempCount >= *keepNumber{
-					break
+				digestCount++
+				if digestCount <= *keepNumber{
+					blobsFiles[bCount] = digestPath
+				}else{
+					os.RemoveAll( *registryDir+"repositories/"+*projectName+"_manifests/tags/"+tag.Name()+"/index/sha256/"+tagDigest)
 				}
 			}
 		}
@@ -148,7 +177,7 @@ func main(){
 
 	for digest := range removeDigestsMap{
 		fmt.Printf("os.Remove %v %v \n", dir, digest)
-		os.RemoveAll(dir+digest)
+		//os.RemoveAll(dir+digest)
 	}
 }
 
