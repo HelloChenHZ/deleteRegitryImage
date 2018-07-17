@@ -150,6 +150,7 @@ func main(){
 	}
 
 	dir := *registryDir+"repositories/"+*projectName+"_layers/sha256/"
+	dir_blob := *registryDir+"blobs/sha256/"
 	_ = filepath.Walk(dir, func(path string, info os.FileInfo, err error) error{
 		if err != nil {
 			return err
@@ -177,7 +178,9 @@ func main(){
 
 	for digest := range removeDigestsMap{
 		fmt.Printf("os.Remove %v %v \n", dir, digest)
-		//os.RemoveAll(dir+digest)
+		os.RemoveAll(dir+digest)
+                fmt.Printf("blob os.Remove %v %v %v \n", dir_blob, digest[:2], digest)
+		os.RemoveAll(dir_blob+digest[:2]+"/"+digest)
 	}
 }
 
